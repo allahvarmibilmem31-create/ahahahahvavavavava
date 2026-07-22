@@ -1,5 +1,4 @@
 #pragma once
-
 #include <Windows.h>
 #include <TlHelp32.h>
 #include <string>
@@ -7,6 +6,8 @@
 #include <unordered_map>
 #include <mutex>
 #include <chrono>
+#include <algorithm>
+#include <cmath>
 
 namespace mem {
     inline HANDLE pHandle;

@@ -2,9 +2,11 @@
 #include <vector>
 #include <functional>
 #include <mutex>
+#include <algorithm>
+#include <cmath>
 #include "../math/vector.h"
 
-// Single RGB struct definition (removed duplicates)
+// Single RGB struct definition - ONLY HERE
 struct RGB {
     int R, G, B, A;
 };

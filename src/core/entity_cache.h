@@ -41,6 +41,7 @@ public:
     explicit EntityCache(UINT refresh_rate_numerator = 144, UINT refresh_rate_denominator = 1, int server_tick_rate = 128);
     ~EntityCache();
     
+    // FIXED: Return by value, not by const reference
     std::vector<EntityData> GetEntities(uintptr_t client, const GameData& game_data);
     void UpdateAsync();
     void WaitForUpdate();

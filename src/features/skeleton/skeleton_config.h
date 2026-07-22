@@ -1,9 +1,7 @@
 #pragma once
-#include "../../math/vector.h"
+#include "../../renderer/renderer.h"
 
-struct RGB {
-    int R, G, B, A;
-};
+// NO RGB STRUCT HERE - Use from renderer.h instead
 
 struct SkeletonConfig {
     bool enabled = true;

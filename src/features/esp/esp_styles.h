@@ -1,6 +1,5 @@
 #pragma once
 #include "../../math/vector.h"
-#include "../../memory/memory.h"
 #include "../../renderer/renderer.h"
 
 enum class BoxStyle {
