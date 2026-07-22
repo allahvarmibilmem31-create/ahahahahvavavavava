@@ -40,7 +40,7 @@ EntityData* Aimbot::FindClosestTarget(const GameData& game_data, const std::vect
         // Check team
         if (entity.team == game_data.localTeam) continue;
         
-        // Check distance
+        // Check distance - FIXED: use entity.origin instead of view_matrix[3]
         float dist = CalculateDistance(entity.origin, game_data.view_matrix[3]);
         if (dist > settings.max_distance) continue;
         
@@ -49,7 +49,7 @@ EntityData* Aimbot::FindClosestTarget(const GameData& game_data, const std::vect
         
         // Check FOV
         float screen_dist = CalculateScreenDistance(
-            game_data.view_matrix[3],
+            Vector3(game_data.view_matrix[3][0], game_data.view_matrix[3][1], game_data.view_matrix[3][2]),
             settings.aim_at_head ? entity.head : entity.origin,
             game_data.view_matrix
         );

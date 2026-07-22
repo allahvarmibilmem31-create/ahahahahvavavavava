@@ -59,6 +59,7 @@ void Glow::Update(uintptr_t client, const GameData& game_data, const std::vector
         RGB glow_color = (entity.team == game_data.localTeam) ? 
             settings.ally_color : settings.enemy_color;
         
-        ApplyGlow(entity.origin, glow_color, settings.intensity);
+        // FIXED: Pass pawn address instead of Vector3 origin
+        ApplyGlow(reinterpret_cast<uintptr_t>(&entity), glow_color, settings.intensity);
     }
 }

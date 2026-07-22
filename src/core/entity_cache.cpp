@@ -68,7 +68,8 @@ Vector3 EntityCache::GetBonePosition(uintptr_t pawn, int boneId) {
     return bonePos;
 }
 
-const std::vector<EntityData>& EntityCache::GetEntities(uintptr_t client, const GameData& game_data) {
+// FIXED: Return by value, not by const reference
+std::vector<EntityData> EntityCache::GetEntities(uintptr_t client, const GameData& game_data) {
     const auto now = std::chrono::steady_clock::now();
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update);
 
@@ -77,16 +78,13 @@ const std::vector<EntityData>& EntityCache::GetEntities(uintptr_t client, const 
             update_thread->join();
         }
 
-        update_thread = std::make_unique<std::thread>([this, client,
-            localPlayerPawn = game_data.localPlayerPawn,
-            entList = game_data.entList,
-            localTeam = game_data.localTeam]() {
-                auto new_entities = ReadEntities(client, GameData{ .localPlayerPawn = localPlayerPawn, .entList = entList, .localTeam = localTeam });
-                std::lock_guard<std::mutex> lock(mtx);
-                cached_entities = std::move(new_entities);
-                last_update = std::chrono::steady_clock::now();
-                is_updating = false;
-            });
+        update_thread = std::make_unique<std::thread>([this, client, game_data]() {
+            auto new_entities = ReadEntities(client, game_data);
+            std::lock_guard<std::mutex> lock(mtx);
+            cached_entities = std::move(new_entities);
+            last_update = std::chrono::steady_clock::now();
+            is_updating = false;
+        });
     }
 
     std::lock_guard<std::mutex> lock(mtx);
