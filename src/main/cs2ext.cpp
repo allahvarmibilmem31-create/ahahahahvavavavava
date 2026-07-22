@@ -7,6 +7,7 @@
 #include <thread>
 #include <string>
 #include <memory>
+#include <vector>
 
 #include "../math/vector.h"
 #include "../memory/memory.h"
@@ -16,7 +17,6 @@
 #include "../../imgui/imgui_impl_win32.h"
 #include "../core/entity_cache.h"
 #include "../renderer/renderer.h"
-#include "../renderer/esp_renderer.h"
 #include "../gui/gui_manager.h"
 #include "../features/aimbot/aimbot.h"
 #include "../features/bhop/bhop.h"
@@ -68,8 +68,7 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPA
     }
     case WM_KEYDOWN: {
         if (w_param == VK_INSERT) {
-            // Toggle GUI visibility
-            // This would be handled by GUIManager
+            // Toggle GUI visibility - handled by GUIManager
         }
         break;
     }
@@ -77,6 +76,7 @@ LRESULT CALLBACK window_procedure(HWND window, UINT message, WPARAM w_param, LPA
     return DefWindowProc(window, message, w_param, l_param);
 }
 
+// FIXED: Replaced raw new[] with std::vector to prevent memory leaks
 void GetNativeRefreshRate(HWND hwnd, UINT& numerator, UINT& denominator) {
     DXGI_MODE_DESC modeDesc = {};
     IDXGIFactory* pFactory = nullptr;
@@ -87,21 +87,22 @@ void GetNativeRefreshRate(HWND hwnd, UINT& numerator, UINT& denominator) {
         if (SUCCEEDED(pFactory->EnumAdapters(0, &pAdapter))) {
             if (SUCCEEDED(pAdapter->EnumOutputs(0, &pOutput))) {
                 UINT numModes = 0;
-                pOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, 0, &numModes, nullptr);
-
-                if (numModes > 0) {
-                    DXGI_MODE_DESC* modes = new DXGI_MODE_DESC[numModes];
-                    if (SUCCEEDED(pOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, 0, &numModes, modes))) {
-                        for (UINT i = 0; i < numModes; i++) {
-                            if (modes[i].Width == GetSystemMetrics(SM_CXSCREEN) &&
-                                modes[i].Height == GetSystemMetrics(SM_CYSCREEN)) {
-                                numerator = modes[i].RefreshRate.Numerator;
-                                denominator = modes[i].RefreshRate.Denominator;
-                                break;
+                if (SUCCEEDED(pOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, 0, &numModes, nullptr))) {
+                    if (numModes > 0) {
+                        // FIXED: Use std::vector instead of raw new[]
+                        std::vector<DXGI_MODE_DESC> modes(numModes);
+                        if (SUCCEEDED(pOutput->GetDisplayModeList(DXGI_FORMAT_R8G8B8A8_UNORM, 0, &numModes, modes.data()))) {
+                            for (UINT i = 0; i < numModes; i++) {
+                                if (modes[i].Width == static_cast<UINT>(GetSystemMetrics(SM_CXSCREEN)) &&
+                                    modes[i].Height == static_cast<UINT>(GetSystemMetrics(SM_CYSCREEN))) {
+                                    numerator = modes[i].RefreshRate.Numerator;
+                                    denominator = modes[i].RefreshRate.Denominator;
+                                    break;
+                                }
                             }
                         }
+                        // FIXED: Vector automatically deallocated here - no memory leak
                     }
-                    delete[] modes;
                 }
                 pOutput->Release();
             }
@@ -116,6 +117,7 @@ void GetNativeRefreshRate(HWND hwnd, UINT& numerator, UINT& denominator) {
     }
 }
 
+// FIXED: Improved error handling for COM object releases
 void CleanupResources(
     IDXGISwapChain*& swap_chain,
     ID3D11Device*& device,
@@ -129,42 +131,54 @@ void CleanupResources(
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
-    if (swap_chain) swap_chain->Release();
-    if (device_context) device_context->Release();
-    if (device) device->Release();
-    if (render_target_view) render_target_view->Release();
+    // FIXED: Safe release with null checks
+    if (render_target_view) {
+        render_target_view->Release();
+        render_target_view = nullptr;
+    }
+    if (device_context) {
+        device_context->Release();
+        device_context = nullptr;
+    }
+    if (device) {
+        device->Release();
+        device = nullptr;
+    }
+    if (swap_chain) {
+        swap_chain->Release();
+        swap_chain = nullptr;
+    }
 
-    DestroyWindow(window);
+    if (window) {
+        DestroyWindow(window);
+    }
     UnregisterClassW(wc.lpszClassName, wc.hInstance);
 }
 
 class CheatEngine {
 private:
-    std::unique_ptr<ESP> esp;
     std::unique_ptr<Aimbot> aimbot;
     std::unique_ptr<BunnyHop> bhop;
     std::unique_ptr<Glow> glow;
     std::unique_ptr<SkeletonRenderer> skeleton;
     std::unique_ptr<GUIManager> gui;
     std::unique_ptr<Renderer> renderer;
-    std::unique_ptr<ESPRenderer> esp_renderer;
     std::unique_ptr<EntityCache> entity_cache;
     GameData game_data;
+    std::vector<EntityData> cached_entities;
 
 public:
     CheatEngine() {
-        esp = std::make_unique<ESP>();
         aimbot = std::make_unique<Aimbot>();
         bhop = std::make_unique<BunnyHop>();
         glow = std::make_unique<Glow>();
         skeleton = std::make_unique<SkeletonRenderer>();
         gui = std::make_unique<GUIManager>();
         renderer = std::make_unique<Renderer>();
-        esp_renderer = std::make_unique<ESPRenderer>();
         entity_cache = std::make_unique<EntityCache>(144, 1, 128);
 
         // Set pointers for GUI
-        gui->SetPointers(esp.get(), aimbot.get(), bhop.get(), glow.get(), skeleton.get());
+        gui->SetPointers(nullptr, aimbot.get(), bhop.get(), glow.get(), skeleton.get());
     }
 
     bool Initialize(DWORD pid, uintptr_t client) {
@@ -186,21 +200,21 @@ public:
         }
 
         // Get cached entities
-        const auto& entities = entity_cache->GetEntities(game_data.client, game_data);
+        cached_entities = entity_cache->GetEntities(game_data.client, game_data);
 
         // Update features
-        aimbot->Update(game_data, entities);
+        aimbot->Update(game_data, cached_entities);
         bhop->Update(game_data.localPlayerPawn, game_data.client);
-        glow->Update(game_data.client, game_data, entities);
+        glow->Update(game_data.client, game_data, cached_entities);
     }
 
-    void RenderFrame(const std::vector<EntityData>& entities) {
+    void RenderFrame() {
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        // Render overlay features
-        render::DrawESP(entities, game_data);
+        // Render overlay features - using cached entities
+        render::DrawESP(cached_entities, game_data);
 
         // Render GUI
         gui->Render();
@@ -210,6 +224,10 @@ public:
 
     void ProcessRenderQueue() {
         renderer->ProcessRenderQueue();
+    }
+
+    const std::vector<EntityData>& GetCachedEntities() const {
+        return cached_entities;
     }
 };
 
@@ -292,25 +310,19 @@ INT APIENTRY WinMain(HINSTANCE instance, HINSTANCE, PSTR, INT cmd_show) {
     ID3D11Texture2D* back_buffer = nullptr;
     if (FAILED(swap_chain->GetBuffer(0, IID_PPV_ARGS(&back_buffer)))) {
         MessageBoxW(NULL, L"Failed to get back buffer!", L"Error", MB_ICONEXCLAMATION | MB_OK);
-        swap_chain->Release();
-        device->Release();
-        device_context->Release();
-        DestroyWindow(window);
-        UnregisterClassW(wc.lpszClassName, wc.hInstance);
+        CleanupResources(swap_chain, device, device_context, render_target_view, window, wc);
         return 0;
     }
 
     if (FAILED(device->CreateRenderTargetView(back_buffer, nullptr, &render_target_view))) {
         MessageBoxW(NULL, L"Failed to create render target view!", L"Error", MB_ICONEXCLAMATION | MB_OK);
         back_buffer->Release();
-        swap_chain->Release();
-        device->Release();
-        device_context->Release();
-        DestroyWindow(window);
-        UnregisterClassW(wc.lpszClassName, wc.hInstance);
+        back_buffer = nullptr;
+        CleanupResources(swap_chain, device, device_context, render_target_view, window, wc);
         return 0;
     }
     back_buffer->Release();
+    back_buffer = nullptr;
 
     ShowWindow(window, cmd_show);
     UpdateWindow(window);
@@ -382,9 +394,7 @@ INT APIENTRY WinMain(HINSTANCE instance, HINSTANCE, PSTR, INT cmd_show) {
         }
 
         // Prepare render
-        GameData dummy_data; // Replace with actual game_data from engine
-        std::vector<EntityData> dummy_entities; // Replace with actual entities
-        engine.RenderFrame(dummy_entities);
+        engine.RenderFrame();
         engine.ProcessRenderQueue();
 
         // Present
@@ -399,7 +409,7 @@ INT APIENTRY WinMain(HINSTANCE instance, HINSTANCE, PSTR, INT cmd_show) {
 
         if (frameTimeMs < targetFrameTimeMs) {
             int sleepTimeUs = static_cast<int>((targetFrameTimeMs - frameTimeMs) * 1000);
-            if (sleepTimeUs > 0 && sleepTimeUs < 1000) {
+            if (sleepTimeUs > 0 && sleepTimeUs < 1000000) {
                 std::this_thread::sleep_for(std::chrono::microseconds(sleepTimeUs));
             }
         }
