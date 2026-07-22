@@ -1,7 +1,6 @@
 #define NOMINMAX
 #include "renderer.h"
 #include "../imgui/imgui.h"
-#include "../core/entity_cache.h"
 #include <algorithm>
 #include <cmath>
 
@@ -103,7 +102,7 @@ namespace render {
         }
     }
 
-    // FIXED: Consolidated ESP rendering - single source of truth
+    // FIXED: Use global EntityData and GameData types
     void DrawESP(const std::vector<EntityData>& entities, const GameData& game_data) {
         auto drawList = ImGui::GetBackgroundDrawList();
         if (!drawList) return;

@@ -1,15 +1,21 @@
 #pragma once
-#include "../../renderer/renderer.h"
+#include <Windows.h>
 #include <fstream>
+#include <mutex>
+#include <string>
+#include <sstream>
+#include <chrono>
+#include <cstdio>
 
-// Fix logger - was trying to call methods on string
+// Simplified logger with no duplicate definitions
 class Logger {
 private:
-    std::string log_file_path;
     std::ofstream file_stream;
     std::mutex log_mutex;
     bool console_logging_enabled = true;
     bool file_logging_enabled = false;
+
+    Logger() = default;
 
 public:
     static Logger& Instance() {
@@ -17,29 +23,13 @@ public:
         return instance;
     }
 
-    void Initialize(const std::string& log_file) {
-        log_file_path = log_file;
-        if (file_logging_enabled) {
-            file_stream.open(log_file_path, std::ios::app);
-        }
-    }
+    // Delete copy constructor/assignment
+    Logger(const Logger&) = delete;
+    Logger& operator=(const Logger&) = delete;
 
-    void Shutdown() {
-        if (file_stream.is_open()) {
-            file_stream.close();
-        }
-    }
-
-    void Log(const std::string& message) {
-        std::lock_guard<std::mutex> lock(log_mutex);
-        if (console_logging_enabled) {
-            OutputDebugStringA((message + "\n").c_str());
-        }
-        if (file_logging_enabled && file_stream.is_open()) {
-            file_stream << message << "\n";
-            file_stream.flush();
-        }
-    }
+    void Initialize(const std::string& log_file_path);
+    void Shutdown();
+    void Log(const std::string& message);
 };
 
 #define LOG_DEBUG(msg) Logger::Instance().Log(msg)

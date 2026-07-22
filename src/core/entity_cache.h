@@ -31,6 +31,13 @@ struct GameData {
     std::uintptr_t client = 0;
     DWORD pid = 0;
 
+    // FIXED: Mark copy constructor as deleted to prevent issues
+    GameData() = default;
+    GameData(const GameData&) = delete;
+    GameData& operator=(const GameData&) = delete;
+    GameData(GameData&&) = default;
+    GameData& operator=(GameData&&) = default;
+
     bool IsValid() const {
         return localPlayerPawn != 0 && entList != 0;
     }
@@ -52,7 +59,7 @@ public:
     }
 
 private:
-    // FIXED: Correct signature - 2 parameters, not 4
+    // FIXED: Correct signature - 2 parameters only
     std::vector<EntityData> ReadEntities(uintptr_t client, const GameData& game_data);
     Vector3 GetBonePosition(uintptr_t pawn, int boneId);
     void ProcessEntityData(EntityData& entity);

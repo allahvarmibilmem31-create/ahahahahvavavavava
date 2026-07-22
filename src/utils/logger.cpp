@@ -2,8 +2,6 @@
 #include "logger.h"
 #include <Windows.h>
 #include <filesystem>
-#include <sstream>
-#include <chrono>
 
 void Logger::Initialize(const std::string& log_file_path) {
     std::lock_guard<std::mutex> lock(log_mutex);

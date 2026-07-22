@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include "../math/vector.h"
+#include "../core/entity_cache.h"
 
 // Single RGB struct definition - ONLY HERE
 struct RGB {
@@ -18,8 +19,9 @@ namespace render {
     void DrawText(int x, int y, RGB color, const char* text);
     void DrawCircle(int x, int y, int radius, RGB color, float thickness, int segments = 12);
     void DrawFilledCircle(int x, int y, int radius, RGB color, int segments = 12);
-    void DrawESP(const std::vector<class EntityData>& entities, const class GameData& game_data);
-    void DrawDebugInfo(const class GameData& game_data, size_t entity_count);
+    // FIXED: Use global EntityData and GameData, not render:: namespace
+    void DrawESP(const std::vector<EntityData>& entities, const GameData& game_data);
+    void DrawDebugInfo(const GameData& game_data, size_t entity_count);
 }
 
 class Renderer {

@@ -68,7 +68,7 @@ Vector3 EntityCache::GetBonePosition(uintptr_t pawn, int boneId) {
     return bonePos;
 }
 
-// FIXED: Return by value, not by const reference
+// FIXED: Return by value, not by const reference, and capture GameData by reference
 std::vector<EntityData> EntityCache::GetEntities(uintptr_t client, const GameData& game_data) {
     const auto now = std::chrono::steady_clock::now();
     const auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_update);
@@ -78,8 +78,19 @@ std::vector<EntityData> EntityCache::GetEntities(uintptr_t client, const GameDat
             update_thread->join();
         }
 
-        update_thread = std::make_unique<std::thread>([this, client, game_data]() {
-            auto new_entities = ReadEntities(client, game_data);
+        // FIXED: Capture values instead of GameData by value to avoid copy issues
+        update_thread = std::make_unique<std::thread>([this, client,
+            localPlayerPawn = game_data.localPlayerPawn,
+            entList = game_data.entList,
+            localTeam = game_data.localTeam]() {
+            
+            GameData temp_data;
+            temp_data.localPlayerPawn = localPlayerPawn;
+            temp_data.entList = entList;
+            temp_data.localTeam = localTeam;
+            temp_data.client = client;
+            
+            auto new_entities = ReadEntities(client, temp_data);
             std::lock_guard<std::mutex> lock(mtx);
             cached_entities = std::move(new_entities);
             last_update = std::chrono::steady_clock::now();
@@ -97,9 +108,8 @@ void EntityCache::WaitForUpdate() {
     }
 }
 
-std::vector<EntityData> EntityCache::ReadEntities(uintptr_t client, uintptr_t localPlayerPawn,
-    uintptr_t entList, int localTeam) {
-
+// FIXED: Only 2 parameter version
+std::vector<EntityData> EntityCache::ReadEntities(uintptr_t client, const GameData& game_data) {
     std::vector<EntityData> results;
     results.reserve(MAX_ENTITIES);
 
@@ -107,7 +117,7 @@ std::vector<EntityData> EntityCache::ReadEntities(uintptr_t client, uintptr_t lo
         EntityData data{};
         data.valid = false;
 
-        const uintptr_t listEntry = mem::ReadMem<uintptr_t>(entList + 0x8 * ((i & 0x7FFF) >> 9) + 0x10);
+        const uintptr_t listEntry = mem::ReadMem<uintptr_t>(game_data.entList + 0x8 * ((i & 0x7FFF) >> 9) + 0x10);
         if (!listEntry) continue;
 
         const uintptr_t controller = mem::ReadMem<uintptr_t>(listEntry + 0x70 * (i & 0x1FF));
@@ -116,14 +126,14 @@ std::vector<EntityData> EntityCache::ReadEntities(uintptr_t client, uintptr_t lo
         const uintptr_t pawnHandle = mem::ReadMem<uintptr_t>(controller + m_hPawn);
         if (!pawnHandle) continue;
 
-        const uintptr_t pawnEntry = mem::ReadMem<uintptr_t>(entList + 0x8 * ((pawnHandle & 0x7FFF) >> 9) + 0x10);
+        const uintptr_t pawnEntry = mem::ReadMem<uintptr_t>(game_data.entList + 0x8 * ((pawnHandle & 0x7FFF) >> 9) + 0x10);
         if (!pawnEntry) continue;
 
         const uintptr_t pawn = mem::ReadMem<uintptr_t>(pawnEntry + 0x70 * (pawnHandle & 0x1FF));
-        if (!pawn || pawn == localPlayerPawn) continue;
+        if (!pawn || pawn == game_data.localPlayerPawn) continue;
 
         data.team = mem::ReadMem<int>(pawn + m_iTeamNum);
-        if (data.team == localTeam) continue;
+        if (data.team == game_data.localTeam) continue;
 
         data.health = mem::ReadMem<int>(pawn + m_iHealth);
         if (data.health <= 0 || data.health > 200) continue;
@@ -145,10 +155,6 @@ std::vector<EntityData> EntityCache::ReadEntities(uintptr_t client, uintptr_t lo
     }
 
     return results;
-}
-
-std::vector<EntityData> EntityCache::ReadEntities(uintptr_t client, const GameData& game_data) {
-    return ReadEntities(client, game_data.localPlayerPawn, game_data.entList, game_data.localTeam);
 }
 
 void EntityCache::ProcessEntityData(EntityData& entity) {
