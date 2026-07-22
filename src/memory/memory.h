@@ -16,11 +16,12 @@ namespace mem {
     uintptr_t GetModuleBase(uintptr_t processID, const wchar_t* module);
 
     inline void ReadBuffer(uintptr_t address, void* buffer, size_t size) {
+        if (!pHandle || !buffer) return;
         ReadProcessMemory(pHandle, (LPCVOID)address, buffer, size, nullptr);
     }
 
     inline std::string ReadString(uintptr_t address, size_t max_length = 128) {
-        if (address == 0) return "";
+        if (address == 0 || !pHandle) return "";
 
         std::vector<char> buffer(max_length);
         SIZE_T bytesRead = 0;
@@ -37,7 +38,7 @@ namespace mem {
     }
 
     inline std::wstring ReadWString(uintptr_t address, size_t max_length = 128) {
-        if (address == 0) return L"";
+        if (address == 0 || !pHandle) return L"";
 
         std::vector<wchar_t> buffer(max_length);
         SIZE_T bytesRead = 0;
@@ -56,13 +57,15 @@ namespace mem {
 
     template <typename R>
     R ReadMem(uintptr_t address) {
-        R mit;
+        R mit = {};
+        if (!pHandle || address == 0) return mit;
         ReadProcessMemory(pHandle, (LPCVOID)address, &mit, sizeof(R), nullptr);
         return mit;
     }
 
     template <typename R>
     bool WriteToMem(uintptr_t address, R value) {
+        if (!pHandle || address == 0) return false;
         return WriteProcessMemory(pHandle, (LPVOID)address, &value, sizeof(R), nullptr);
     }
 
@@ -72,6 +75,7 @@ namespace mem {
         std::vector<T> results;
         results.reserve(offsets.size());
         for (const auto& offset : offsets) {
+            if (base == 0) continue;
             results.push_back(ReadMem<T>(base + offset));
         }
         return results;
@@ -87,6 +91,10 @@ namespace mem {
     public:
         template <typename T>
         T ReadCached(uintptr_t address) {
+            if (address == 0 || !pHandle) {
+                return T{};
+            }
+            
             auto now = std::chrono::high_resolution_clock::now().time_since_epoch().count() / 1000000;
             std::lock_guard<std::mutex> lock(cache_mtx);
 
@@ -96,7 +104,8 @@ namespace mem {
             }
 
             T value = ReadMem<T>(address);
-            std::vector<uint8_t> data((uint8_t*)&value, (uint8_t*)&value + sizeof(T));
+            std::vector<uint8_t> data(reinterpret_cast<uint8_t*>(&value), 
+                                       reinterpret_cast<uint8_t*>(&value) + sizeof(T));
             cache[address] = { now, data };
             return value;
         }

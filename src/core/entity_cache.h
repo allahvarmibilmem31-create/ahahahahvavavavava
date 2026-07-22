@@ -32,7 +32,7 @@ struct GameData {
     DWORD pid = 0;
 
     bool IsValid() const {
-        return localPlayerPawn && entList;
+        return localPlayerPawn != 0 && entList != 0;
     }
 };
 
@@ -41,11 +41,14 @@ public:
     explicit EntityCache(UINT refresh_rate_numerator = 144, UINT refresh_rate_denominator = 1, int server_tick_rate = 128);
     ~EntityCache();
     
-    const std::vector<EntityData>& GetEntities(uintptr_t client, const GameData& game_data);
+    std::vector<EntityData> GetEntities(uintptr_t client, const GameData& game_data);
     void UpdateAsync();
     void WaitForUpdate();
     
-    size_t GetEntityCount() const { return cached_entities.size(); }
+    size_t GetEntityCount() const { 
+        std::lock_guard<std::mutex> lock(mtx);
+        return cached_entities.size(); 
+    }
 
 private:
     std::vector<EntityData> ReadEntities(uintptr_t client, const GameData& game_data);
@@ -55,7 +58,7 @@ private:
     std::vector<EntityData> cached_entities;
     std::vector<EntityData> prev_entities;
     
-    std::mutex mtx;
+    mutable std::mutex mtx;
     std::atomic<bool> is_updating{ false };
     std::unique_ptr<std::thread> update_thread;
     
