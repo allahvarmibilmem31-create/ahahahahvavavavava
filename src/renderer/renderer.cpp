@@ -103,7 +103,7 @@ namespace render {
         }
     }
 
-    // Consolidated ESP rendering - single source of truth
+    // FIXED: Consolidated ESP rendering - single source of truth
     void DrawESP(const std::vector<EntityData>& entities, const GameData& game_data) {
         auto drawList = ImGui::GetBackgroundDrawList();
         if (!drawList) return;

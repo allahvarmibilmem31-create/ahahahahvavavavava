@@ -1,6 +1,5 @@
 #define NOMINMAX
 #include "gui_manager.h"
-#include "../features/esp/esp.h"
 
 GUIManager::GUIManager() {
     ApplyStyle();
@@ -75,14 +74,6 @@ void GUIManager::RenderESPTab() {
     ImGui::Text("ESP Settings");
     ImGui::Separator();
     
-    static bool esp_enabled = true;
-    static float esp_distance = 300.0f;
-    static int box_style = 0;
-    static bool draw_health = true;
-    static bool draw_skeleton = false;
-    static bool draw_name = true;
-    static bool draw_distance = false;
-    
     ImGui::Checkbox("Enable ESP##esp_enabled", &esp_enabled);
     ImGui::SliderFloat("Max Distance##ESP", &esp_distance, 100, 2000);
     
@@ -95,9 +86,6 @@ void GUIManager::RenderESPTab() {
     ImGui::Checkbox("Draw Distance##esp_dist", &draw_distance);
     
     ImGui::Separator();
-    static float enemy_color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
-    static float ally_color[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
-    
     ImGui::ColorEdit4("Enemy Color##esp", enemy_color);
     ImGui::ColorEdit4("Ally Color##esp", ally_color);
 }
@@ -110,13 +98,6 @@ void GUIManager::RenderAimbotTab() {
         ImGui::TextColored(ImVec4(1, 1, 0, 1), "Aimbot not initialized");
         return;
     }
-    
-    static bool aimbot_enabled = false;
-    static int aim_mode = 0;
-    static float smoothness = 0.5f;
-    static float fov = 20.0f;
-    static bool prediction = false;
-    static bool visible_only = true;
     
     ImGui::Checkbox("Enable Aimbot##aim_enabled", &aimbot_enabled);
     if (aimbot_enabled) aimbot_ptr->SetMode(AimMode::SMOOTH);
@@ -149,10 +130,6 @@ void GUIManager::RenderBhopTab() {
         return;
     }
     
-    static bool bhop_enabled = false;
-    static bool auto_strafe = true;
-    static float jump_height = 65.0f;
-    
     ImGui::Checkbox("Enable Bhop##bhop_enabled", &bhop_enabled);
     bhop_ptr->SetEnabled(bhop_enabled);
     
@@ -175,11 +152,6 @@ void GUIManager::RenderGlowTab() {
         return;
     }
     
-    static bool glow_enabled = false;
-    static float glow_intensity = 1.0f;
-    static bool glow_visible_only = false;
-    static bool glow_through_walls = true;
-    
     ImGui::Checkbox("Enable Glow##glow_enabled", &glow_enabled);
     glow_ptr->SetEnabled(glow_enabled);
     
@@ -190,9 +162,6 @@ void GUIManager::RenderGlowTab() {
     ImGui::Checkbox("Through Walls##glow", &glow_through_walls);
     
     ImGui::Separator();
-    static float enemy_glow[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
-    static float ally_glow[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
-    
     ImGui::ColorEdit4("Enemy Glow##glow", enemy_glow);
     ImGui::ColorEdit4("Ally Glow##glow", ally_glow);
 }
@@ -206,10 +175,6 @@ void GUIManager::RenderSkeletonTab() {
         return;
     }
     
-    static bool skeleton_enabled = true;
-    static float line_thickness = 1.5f;
-    static bool draw_joints = true;
-    
     ImGui::Checkbox("Enable Skeleton##skel_enabled", &skeleton_enabled);
     skeleton_ptr->SetEnabled(skeleton_enabled);
     
@@ -219,7 +184,6 @@ void GUIManager::RenderSkeletonTab() {
     ImGui::Checkbox("Draw Joints##skel", &draw_joints);
     
     ImGui::Separator();
-    static float skeleton_color[4] = { 0.0f, 1.0f, 1.0f, 1.0f };
     ImGui::ColorEdit4("Skeleton Color##skel", skeleton_color);
 }
 
@@ -227,21 +191,19 @@ void GUIManager::RenderSettingsTab() {
     ImGui::Text("General Settings");
     ImGui::Separator();
     
-    static int fps_limit = 120;
     ImGui::SliderInt("FPS Limit##general", &fps_limit, 30, 360);
     
-    static bool show_debug = false;
     ImGui::Checkbox("Show Debug Info##general", &show_debug);
     
     ImGui::Separator();
     ImGui::TextDisabled("Press INSERT to toggle GUI");
     
     if (ImGui::Button("Save Config##settings", ImVec2(100, 0))) {
-        // Save config
+        // TODO: Implement config save
     }
     ImGui::SameLine();
     if (ImGui::Button("Load Config##settings", ImVec2(100, 0))) {
-        // Load config
+        // TODO: Implement config load
     }
 }
 
