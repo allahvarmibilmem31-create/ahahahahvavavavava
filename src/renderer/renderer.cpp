@@ -3,6 +3,7 @@
 #include "../imgui/imgui.h"
 #include "../core/entity_cache.h"
 #include <algorithm>
+#include <cmath>
 
 Renderer::Renderer() {
     OutputDebugStringA("[Renderer] Initialized\n");
@@ -102,6 +103,7 @@ namespace render {
         }
     }
 
+    // Consolidated ESP rendering - single source of truth
     void DrawESP(const std::vector<EntityData>& entities, const GameData& game_data) {
         auto drawList = ImGui::GetBackgroundDrawList();
         if (!drawList) return;

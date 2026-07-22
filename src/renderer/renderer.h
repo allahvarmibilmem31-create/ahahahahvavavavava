@@ -1,8 +1,10 @@
 #pragma once
 #include <vector>
 #include <functional>
+#include <mutex>
 #include "../math/vector.h"
 
+// Single RGB struct definition (removed duplicates)
 struct RGB {
     int R, G, B, A;
 };

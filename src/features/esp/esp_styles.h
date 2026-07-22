@@ -1,6 +1,7 @@
 #pragma once
 #include "../../math/vector.h"
 #include "../../memory/memory.h"
+#include "../../renderer/renderer.h"
 
 enum class BoxStyle {
     CORNERS,      // Only corners
@@ -19,10 +20,6 @@ struct ESPSettings {
     bool draw_name = true;
     bool draw_distance = false;
     float line_thickness = 1.5f;
-    
-    struct RGB {
-        int R, G, B, A;
-    };
     
     RGB enemy_color = { 255, 0, 0, 255 };     // Red
     RGB ally_color = { 0, 255, 0, 255 };      // Green
