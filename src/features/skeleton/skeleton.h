@@ -1,6 +1,6 @@
 #pragma once
 #include "../../core/entity_cache.h"
-#include "../../renderer/esp_renderer.h"
+#include "../../renderer/renderer.h"
 #include "skeleton_config.h"
 #include <vector>
 #include <utility>

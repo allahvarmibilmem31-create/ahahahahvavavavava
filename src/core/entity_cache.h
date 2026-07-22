@@ -52,6 +52,7 @@ public:
     }
 
 private:
+    // FIXED: Correct signature - 2 parameters, not 4
     std::vector<EntityData> ReadEntities(uintptr_t client, const GameData& game_data);
     Vector3 GetBonePosition(uintptr_t pawn, int boneId);
     void ProcessEntityData(EntityData& entity);
